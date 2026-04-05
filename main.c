@@ -15,6 +15,15 @@
 #define DATE_FORMAT "%02d:%02d - %02d/%02d/%d"
 #define DATE_INSIDE(tm) (tm).tm_hour, (tm).tm_min, (tm).tm_mday, (tm).tm_mon + 1, (tm).tm_year + 1900
 
+#ifdef TEA_SUPPORT
+
+#undef SLEEP_TIME
+#define SLEEP_TIME 1
+#define TEA_PATH "/tmp/idle_inhibit"
+static inline bool inhibited() { return access(TEA_PATH, F_OK) == 0; }
+
+#endif
+
 static volatile sig_atomic_t running = 1;
 
 void handle_sigterm(int sig) {
@@ -76,12 +85,26 @@ int main(void) {
 
         bool is_charging = strcmp(status, "Charging") == 0;
 
+        #ifdef TEA_SUPPORT
+        const char *tea_icon = "[ c[_] pkill -9 sleep ]";
+        #endif
+
         // == Buffer output stuff
+
+#ifdef TEA_SUPPORT
+        snprintf(buffer, sizeof(buffer),
+                 "%s [B: %c%s%%] [D: " DATE_FORMAT "]",
+                 inhibited() ? tea_icon : "",
+                 is_charging ? '+' : ' ',
+                 percentage,
+                 DATE_INSIDE(tm));
+#else
         snprintf(buffer, sizeof(buffer),
                  "[B: %c%s%%] [D: " DATE_FORMAT "]",
                  is_charging ? '+' : ' ',
                  percentage,
                  DATE_INSIDE(tm));
+#endif
 
 
 #ifdef DWM_MODE
